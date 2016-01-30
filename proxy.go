@@ -4,6 +4,7 @@ package middlewareproxy
 
 import (
 	"github.com/justinas/alice"
+	"github.com/srinathh/middleware"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -19,19 +20,13 @@ type Config struct {
 	BasePath string `flag:"basepath,the base path of the remote proxy server"`
 }
 
-// MiddleWare is a function that takes a http.Handler and wraps your middleware around it.
-// Call next.ServeHTTP in your middleware if you want to continue the middleware chain
-// or return to stop propagation.
-type MiddleWare func(next http.Handler) http.Handler
-
 // Run starts the proxy server specified by the config and interposing the provided middleware
-func Run(config Config, middleware ...MiddleWare) error {
+func Run(config Config, mw ...middleware.MiddleWare) error {
 	chain := alice.New()
-	for _, m := range middleware {
+	for _, m := range mw {
 		chain = chain.Append(alice.Constructor(m))
 	}
 
 	proxy := httputil.NewSingleHostReverseProxy(&url.URL{Scheme: config.Scheme, Host: config.Host, Path: config.BasePath})
 	return http.ListenAndServe(config.Addr, chain.Then(proxy))
-
 }
